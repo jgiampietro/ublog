@@ -1,0 +1,19 @@
+application: ublog
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /bootstrap
+  static_dir: bootstrap
+
+- url: /css
+  static_dir: css
+
+- url: .*
+  script: ublog.app
+
+libraries:
+- name: jinja2
+  version: latest

@@ -1,0 +1,37 @@
+{% extends "welcomepage.html" %}
+
+{% block content %}
+
+{% if error %}
+<p>{{error}}</p>
+{% endif %}
+
+<form action="/blog/deleteallposts">
+	<input type="submit" value="DELETE ALL POSTS">
+</form>
+
+<table>
+	<theader>
+		<tr>
+			<th>Username</th>
+			<th>Hashed Password</th>
+			<th>signup date</th>
+		</tr>
+	</theader>
+	<tbody>
+{% for i in users %}
+	<tr>
+		<td>{{i.username}}</td>
+		<td>{{i.password}}</td>
+		<td>{{i.join_date.strftime('%b %d, %Y')}}</td>
+		<td>
+			<form action="/blog/deleteuser/{{i.key().id()}}">
+				<input type="submit" value="DELETE USER">
+			</form>
+		</td>
+	</tr>
+{% endfor %}	
+	</tbody>
+</table>
+
+{% endblock %}

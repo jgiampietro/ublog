@@ -1,0 +1,25 @@
+{% extends "homepage.html" %}
+
+{% block content %}
+
+<table>
+	<form method="post">
+		<tbody>
+			<tr>
+				<td>Username: </td>
+				<td><input type="text" name="username"></td>
+				<td class="error">{{error_username}}</td>
+			</tr>
+			<tr>
+				<td>Password: </td>
+				<td><input type="text" name="password"</td>
+				<td class="error">{{error_password}}</td>
+			</tr>
+			<tr>
+				<td><input type="submit"></td>
+			</tr>
+		</tbody>
+	</form>
+</table>
+
+{% endblock %}
