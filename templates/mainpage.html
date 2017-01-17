@@ -22,8 +22,20 @@
 			<div>
 				{{i.likes}}
 			</div>
+			{% if current_user.username == i.create_user %}
+				<div>
+					<form action="/blog/editpost/{{i.key().id()}}">
+						<input type="submit" value="Edit Post">
+					</form>
+					<form action="/blog/deletepost/{{i.key().id()}}">
+						<input type="submit" value="Delete Post">
+					</form>
+				</div>
+				{% endif %}
 			<div>
-				<div><a href="/blog/likepost/{{i.key().id()}}">Like</a></div>
+				{% if current_user.username != i.create_user %}
+						<div><a href="/blog/likepost/{{i.key().id()}}">Like</a></div>
+				{% endif %}
 		</div>
 		<br><br><hr>
 	{% endfor %}

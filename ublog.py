@@ -299,18 +299,18 @@ class NewPost(Handler):
 
 
 class PostPage(Handler):
-	def get(self, post_id):
+	def get(self, post_id, **params):
 		post = blogposts.post_by_id(post_id)
-		self.render("postpage.html", post=post)
+		self.render("postpage.html", post=post, **params)
 
 class MainPage(Handler):
 	def get(self):
 		posts = db.GqlQuery("SELECT * FROM blogposts order by create_date desc limit 10")
-		self.render("mainpage.html", posts=posts)
+		current_user = users.find_by_id(self.return_id_by_cookie())
+		self.render("mainpage.html", posts=posts, current_user=current_user)
 
 class LikePost(Handler):
 	def get(self, post_id):
-		params = dict()
 		if self.read_cookie():
 			self.like_user = users.find_by_id(self.return_id_by_cookie())
 			key = db.Key.from_path('blogposts', int(post_id))
@@ -324,12 +324,11 @@ class LikePost(Handler):
 					self.like_user.liked_posts.append(str(post.key().id()))
 					self.redirect('/')
 				else:
-					self.write("you cannot like a post more than once!")
+					self.write("You cannot like a post more than once!")
 			else:
-				self.write("you cannot like on your own post!")
+				self.write("You cannot like your own post")
 		else:
-			self.write("you must be logged in to like a post")
-
+			self.write("You must be logged in to like a post")
 
 
 

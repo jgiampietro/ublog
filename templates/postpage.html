@@ -19,6 +19,15 @@
 	</div>
 	<div>
 		{{post.likes}}
+		{% if hist_error %}
+			{{hist_error}}
+		{% endif %}
+		{% if own_post_error %}
+			{{own_post_error}}
+		{% endif %}
+		{% if login_error %}
+			{{login_error}}
+		{% endif %}
 	</div>
 	<div>
 		{% for i in post.like_users %}
