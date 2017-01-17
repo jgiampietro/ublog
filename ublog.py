@@ -330,6 +330,40 @@ class LikePost(Handler):
 		else:
 			self.write("You must be logged in to like a post")
 
+class MyPosts(Handler):
+	def get(self):
+		if self.read_cookie():
+			self.like_user = users.find_by_id(self.return_id_by_cookie())
+			c = blogposts.all().filter('create_user =', self.like_user.username)
+			self.render("myposts.html", posts=c)
+		else:
+			self.redirect('/blog/login')
+
+class EditPost(Handler):
+	def get(self, post_id):
+		key = db.Key.from_path('blogposts', int(post_id))
+		post = db.get(key)
+		self.render('editpost.html', post=post)
+
+	def post(self, post_id):
+		key = db.Key.from_path('blogposts', int(post_id))
+		post = db.get(key)
+		self.title = self.request.get("title")
+		self.body = self.request.get("body")
+
+		post.title = self.title
+		post.body = self.body
+		post.put()
+		self.redirect('/blog/postpage/%s' % str(post.key().id()))
+
+class DeletePost(Handler):
+	def get(self, post_id):
+		key = db.Key.from_path('blogposts', int(post_id))
+		post = db.get(key)
+		post.delete()
+		self.redirect('/blog/myposts')
+
+
 
 
 app = webapp2.WSGIApplication([('/', HomePage),
@@ -343,5 +377,8 @@ app = webapp2.WSGIApplication([('/', HomePage),
 							   ('/blog/postpage/(\d+)', PostPage),
 							   ('/blog/newpost', NewPost),
 							   ('/blog/likepost/(\d+)', LikePost),
+							   ('/blog/editpost/(\d+)', EditPost),
+							   ('/blog/deletepost/(\d+)', DeletePost),
+							   ('/blog/myposts', MyPosts),
 							   ('/blog/logout', LogOut)],
 								debug=True)

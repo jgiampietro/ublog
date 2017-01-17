@@ -1,0 +1,27 @@
+{% extends "homepage.html" %}
+
+{% block content %}
+
+{% for i in posts %}
+	<div>
+		<div>
+			<div>
+				<a href="/blog/postpage/{{i.key().id()}}">{{i.title}}</a>
+			</div>
+			<div>
+				{{i.create_user}}
+			</div>
+			<div>
+				{{i.create_date.strftime('%b %d, %Y')}}
+			</div>
+		</div>
+		<div>
+			{{i.body}}
+		</div>
+		<div>
+			{{i.likes}}
+		</div>
+	</div>
+{% endfor %}
+
+{% endblock %}

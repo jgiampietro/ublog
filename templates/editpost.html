@@ -1,0 +1,23 @@
+{% extends "homepage.html" %}
+
+{% block content %}
+
+<table>
+	<tbody>
+		<form method="post">
+			<tr>
+				<td>Title: </td>
+				<td><input type="text" name="title" value="{{post.title}}"></td>
+			</tr>
+			<tr>
+				<td>Body: </td>
+				<td><textarea name="body">{{post.body}}</textarea></td>
+			</tr>
+			<tr>
+				<td><input type="submit"></td>
+			</tr>
+		</form>
+	</tbody>
+</table>
+
+{% endblock %}
