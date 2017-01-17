@@ -1,0 +1,30 @@
+{% extends "homepage.html" %}
+
+{% block content %}
+
+<div>
+	<div>
+		<div>
+			{{post.title}}
+		</div>
+		<div>
+			{{post.create_user}}
+		</div>
+		<div>
+			{{post.create_date.strftime('%b %d, %Y')}}
+		</div>
+	</div>
+	<div>
+		{{post.body}}
+	</div>
+	<div>
+		{{post.likes}}
+	</div>
+	<div>
+		{% for i in post.like_users %}
+			<h1>{{i}}</h1>
+		{% endfor %}
+	</div>
+</div>
+
+{% endblock %}

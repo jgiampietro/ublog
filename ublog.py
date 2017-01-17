@@ -80,6 +80,7 @@ class users(db.Model):
 	password = db.StringProperty(required = True)
 	is_admin = db.BooleanProperty()
 	join_date = db.DateTimeProperty(auto_now_add = True)
+	liked_posts = db.StringListProperty()
 
 	@classmethod
 	def signup(cls, username, password, email=None):
@@ -87,6 +88,12 @@ class users(db.Model):
 		return users(username=username,
 					 password=secure_pw,
 					 email=email)
+
+	@classmethod
+	def find_by_id(cls, user_id):
+		key = db.Key.from_path('users', int(user_id))
+		c = db.get(key)
+		return c
 
 	@classmethod
 	def find_by_un(cls, username):
@@ -107,6 +114,27 @@ class blogposts(db.Model):
 	create_date = db.DateTimeProperty(auto_now_add = True)
 	likes = db.IntegerProperty()
 	dislikes = db.IntegerProperty()
+	create_user = db.StringProperty(required = True)
+	like_users = db.StringListProperty()
+
+	@classmethod
+	def post(cls, title, body, create_user):
+		return blogposts(title=title,
+						 body=body,
+						 create_user=create_user,
+						 likes=0)
+
+	@classmethod
+	def return_key(cls, post_key):
+		key = db.Key.from_path('blogposts', int(post_key))
+		c = db.get(key)
+		return c
+
+	@classmethod
+	def post_by_id(cls, post_id):
+		key = db.Key.from_path('blogposts', int(post_id))
+		c = db.get(key)
+		return c
 
 class comments(db.Model):
 	create_user = db.StringProperty(required = True)
@@ -230,17 +258,91 @@ class DeleteAllPosts(Handler):
 class LogOut(Handler):
 	def get(self):
 		self.logout()
-		self.redirect('/')
+		self.redirect('/blog/login')
+
+class NewPost(Handler):
+	def get(self):
+		self.render("newpost.html")
+
+	def post(self):
+		params = dict()
+
+		if self.read_cookie():
+			self.title = self.request.get("title")
+			self.body = self.request.get("body")
+			self.create_user = users.find_by_id(self.return_id_by_cookie())
+			error = False
+
+			if not self.title:
+				params['title_error'] = "You must enter a title"
+				error = True
+
+			if not self.body:
+				params['body_error'] = "You must enter a body"
+				error = True
+
+			if error:
+				params['title'] = self.title
+				params['body'] = self.body
+				self.render("newpost.html", **params)
+
+			else:
+				c = blogposts.post(self.title, self.body, self.create_user.username)
+				c.put()
+				post_id = c.key().id()
+				self.redirect('/blog/postpage/%s' % post_id)
+		else:
+			params['login_error'] = "You must be logged in to post!"
+			self.render("newpost.html", **params)
+
+
+
+
+class PostPage(Handler):
+	def get(self, post_id):
+		post = blogposts.post_by_id(post_id)
+		self.render("postpage.html", post=post)
+
+class MainPage(Handler):
+	def get(self):
+		posts = db.GqlQuery("SELECT * FROM blogposts order by create_date desc limit 10")
+		self.render("mainpage.html", posts=posts)
+
+class LikePost(Handler):
+	def get(self, post_id):
+		params = dict()
+		if self.read_cookie():
+			self.like_user = users.find_by_id(self.return_id_by_cookie())
+			key = db.Key.from_path('blogposts', int(post_id))
+			post = db.get(key)
+			if self.like_user.username != post.create_user:
+				check_history = post.like_users
+				if self.like_user.username not in check_history:
+					post.likes = post.likes + 1
+					post.like_users.append(self.like_user.username)
+					post.put()
+					self.like_user.liked_posts.append(str(post.key().id()))
+					self.redirect('/')
+				else:
+					self.write("you cannot like a post more than once!")
+			else:
+				self.write("you cannot like on your own post!")
+		else:
+			self.write("you must be logged in to like a post")
 
 
 
 
 app = webapp2.WSGIApplication([('/', HomePage),
+							   ('/blog', MainPage),
 							   ('/blog/signup', SignUp),
 							   ('/blog/login', LogIn),
 							   ('/blog/welcomepage', WelcomePage),
 							   ('/blog/adminpage', AdminPage),
 							   ('/blog/deleteuser/(\d+)', DeleteUser),
 							   ('/blog/deleteallposts', DeleteAllPosts),
+							   ('/blog/postpage/(\d+)', PostPage),
+							   ('/blog/newpost', NewPost),
+							   ('/blog/likepost/(\d+)', LikePost),
 							   ('/blog/logout', LogOut)],
 								debug=True)
