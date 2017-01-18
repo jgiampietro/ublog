@@ -286,6 +286,7 @@ class NewPost(Handler):
 		if self.read_cookie():
 			self.title = self.request.get("title")
 			self.body = self.request.get("body")
+			body = self.body.replace('\n', '<br>')
 			self.create_user = users.find_by_id(self.return_id_by_cookie())
 			error = False
 
@@ -299,11 +300,11 @@ class NewPost(Handler):
 
 			if error:
 				params['title'] = self.title
-				params['body'] = self.body
+				params['body'] = body
 				self.render("newpost.html", **params)
 
 			else:
-				c = blogposts.post(self.title, self.body, self.create_user.username)
+				c = blogposts.post(self.title, body, self.create_user.username)
 				c.put()
 				post_id = c.key().id()
 				self.redirect('/blog/postpage/%s' % post_id)
@@ -346,7 +347,7 @@ class LikePost(Handler):
 					post.like_users.append(self.like_user.username)
 					post.put()
 					self.like_user.liked_posts.append(str(post.key().id()))
-					self.redirect('/')
+					self.redirect('/blog')
 				else:
 					self.write("You cannot like a post more than once!")
 			else:
@@ -374,9 +375,10 @@ class EditPost(Handler):
 		post = db.get(key)
 		self.title = self.request.get("title")
 		self.body = self.request.get("body")
+		body = self.body.replace('\n', '<br>')
 
 		post.title = self.title
-		post.body = self.body
+		post.body = body
 		post.put()
 		self.redirect('/blog/postpage/%s' % str(post.key().id()))
 

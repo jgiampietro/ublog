@@ -4,44 +4,56 @@
 
 <div class="container">
 	{% for i in posts %}
-		<div>
-			<div>
-				<div>
-					<a href="/blog/postpage/{{i.key().id()}}">{{i.title}}</a>
+		<div class="post col-xs-12">
+			<div class="row post-header">	
+				<div class="col-xs-6 user">
+					Created by: <b>{{i.create_user}}</b>
 				</div>
-				<div>
-					{{i.create_user}}
+				<div class="col-xs-6 text-right date">
+					<em>Created on: {{i.create_date.strftime('%b %d, %Y')}}</em>
 				</div>
-				<div>
-					{{i.create_date.strftime('%b %d, %Y')}}
+				<div class="col-xs-12 title text-center">
+					<b>Title:</b><a href="/blog/postpage/{{i.key().id()}}">{{i.title}}</a>
 				</div>
+				<hr>
 			</div>
-			<div>
-				{{i.body}}
+			<div class="post-body col-xs-12 text-center">
+				{{i.body | safe}}
 			</div>
-			<div>
-				{{i.likes}}
-			</div>
-			{% if current_user.username == i.create_user %}
-				<div>
-					<form action="/blog/editpost/{{i.key().id()}}">
-						<input type="submit" value="Edit Post">
-					</form>
-					<form action="/blog/deletepost/{{i.key().id()}}">
-						<input type="submit" value="Delete Post">
-					</form>
+			<hr>
+			<div class="row post-footer">
+				<div class="col-xs-12 likes">
+					<em>Likes: {{i.likes}}</em>
+				</div>
+				{% if current_user.username == i.create_user %}
+				<div class="buttons center-block text-center row">
+					<div class="col-xs-6">
+						<form action="/blog/editpost/{{i.key().id()}}">
+							<input type="submit" value="Edit Post" class="btn btn-default post-buttons">
+						</form>
+					</div>
+					<div class="col-xs-6">
+						<form action="/blog/deletepost/{{i.key().id()}}">
+							<input type="submit" value="Delete Post" class="btn btn-default post-buttons">
+						</form>
+					</div>
 				</div>
 				{% endif %}
-			<div>
-				{% if current_user.username != i.create_user %}
-					{% if current_user.username not in i.like_users %}
-						<div><a href="/blog/likepost/{{i.key().id()}}">Like</a></div>
-					{% else %}
-						You liked this post
-					{% endif %}
+				<div class="likes row"> 
+					<div class ="col-xs-12">
+						{% if current_user.username != i.create_user %}
+							{% if current_user.username not in i.like_users %}
+								<div><a href="/blog/likepost/{{i.key().id()}}">Like</a></div>
+							{% else %}
+								<b>You liked this post</b>
+							{% endif %}
+					</div>
+				</div>
 				{% endif %}
+			</div>
+			<br><br><hr>
 		</div>
-		<br><br><hr>
+		<hr>
 	{% endfor %}
 </div>
 
