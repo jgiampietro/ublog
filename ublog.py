@@ -55,12 +55,14 @@ class Handler(webapp2.RequestHandler):
 
 	def read_cookie(self):
 		cookie = self.request.cookies.get('user_id')
-		return check_cookie(cookie)
+		if cookie:
+			return check_cookie(cookie)
 
 	def return_id_by_cookie(self):
 		users_cookie = self.request.cookies.get('user_id')
-		user_id = users_cookie.split('|')[0]
-		return int(user_id)
+		if users_cookie:
+			user_id = users_cookie.split('|')[0]
+			return int(user_id)
 
 	def login(self, user_db_entry):
 		cookie = self.make_cookie(str(user_db_entry.key().id()))
@@ -138,9 +140,23 @@ class blogposts(db.Model):
 
 class comments(db.Model):
 	create_user = db.StringProperty(required = True)
-	create_time = db.DateTimeProperty(auto_now_add = True)
-	content = db.TextProperty(required = True)
+	title = db.StringProperty(required = True)
+	body = db.TextProperty(required = True)
+	create_date = db.DateTimeProperty(auto_now_add = True)
+	post = db.StringProperty(required = True)
 
+	@classmethod
+	def post_comment(cls, create_user, title, body, post):
+		return comments(create_user=create_user,
+						title=title,
+						body=body,
+						post=post)
+
+	@classmethod
+	def comments_by_post_id(cls, post_id):
+		c = comments.all()
+		d = c.filter('post =', post_id)
+		return d
 
 def valid_username(username):
     username_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
@@ -258,7 +274,7 @@ class DeleteAllPosts(Handler):
 class LogOut(Handler):
 	def get(self):
 		self.logout()
-		self.redirect('/blog/login')
+		self.redirect('/blog/signup')
 
 class NewPost(Handler):
 	def get(self):
@@ -299,14 +315,22 @@ class NewPost(Handler):
 
 
 class PostPage(Handler):
-	def get(self, post_id, **params):
+	def get(self, post_id):
 		post = blogposts.post_by_id(post_id)
-		self.render("postpage.html", post=post, **params)
+		self.user = ""
+		post_comments = comments.comments_by_post_id(str(post_id))
+		if self.read_cookie():
+			self.user = users.find_by_id(self.return_id_by_cookie())
+		self.render("postpage.html", post=post, user=self.user, comments=post_comments)
 
 class MainPage(Handler):
 	def get(self):
 		posts = db.GqlQuery("SELECT * FROM blogposts order by create_date desc limit 10")
-		current_user = users.find_by_id(self.return_id_by_cookie())
+		current_user = ""
+
+		if self.return_id_by_cookie():
+			current_user = users.find_by_id(self.return_id_by_cookie())
+
 		self.render("mainpage.html", posts=posts, current_user=current_user)
 
 class LikePost(Handler):
@@ -363,6 +387,45 @@ class DeletePost(Handler):
 		post.delete()
 		self.redirect('/blog/myposts')
 
+class Comment(Handler):
+	def get(self, post_id):
+		post = blogposts.post_by_id(post_id)
+		self.render('comment.html', post=post)
+	def post(self, post_id):
+		if self.read_cookie():
+			self.comment_user = users.find_by_id(self.return_id_by_cookie())
+			self.title = self.request.get("title")
+			self.body = self.request.get("body")
+			self.post = post_id
+			error = False
+			error_title = ""
+			error_body = ""
+
+			if not self.title:
+				error_title = "Please enter a title"
+				error = True
+			if not self.body:
+				error_body = "Please enter a body"
+				error = True
+
+			if not error:
+				c = comments.post_comment(self.comment_user.username, self.title,
+										  self.body, self.post)
+				c.put()
+				self.redirect('/blog/postpage/%s' % self.post)
+			else:
+				self.render('comment.html', post=self.post, error_title=error_title,
+											error_body=error_body, title=self.title,
+											body=self.body)
+		else:
+			self.redirect('/blog/login')
+
+class ViewComment(Handler):
+	def get(self, comment_id):
+		key = db.Key.from_path('comments', int(comment_id))
+		comment = db.get(key)
+		self.render("viewcomment.html", comment=comment)
+
 
 
 
@@ -379,6 +442,8 @@ app = webapp2.WSGIApplication([('/', HomePage),
 							   ('/blog/likepost/(\d+)', LikePost),
 							   ('/blog/editpost/(\d+)', EditPost),
 							   ('/blog/deletepost/(\d+)', DeletePost),
+							   ('/blog/comment/(\d+)', Comment),
+							   ('/blog/viewcomment/(\d+)', ViewComment),
 							   ('/blog/myposts', MyPosts),
 							   ('/blog/logout', LogOut)],
 								debug=True)

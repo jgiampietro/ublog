@@ -1,0 +1,19 @@
+{% extends "welcomepage.html" %}
+
+{% block content %}
+
+<div>
+	<div>
+		{{comment.title}}
+		{{comment.create_user}}
+		{{comment.create_date.strftime('%b %d, %Y')}}
+	</div>
+	<div>
+		{{comment.body}}
+	</div>
+	<div>
+		<a href="/blog/postpage/{{comment.post}}">Return to post</a>
+	</div>
+</div>
+
+{% endblock %}

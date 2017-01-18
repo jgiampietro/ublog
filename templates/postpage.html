@@ -19,20 +19,41 @@
 	</div>
 	<div>
 		{{post.likes}}
-		{% if hist_error %}
-			{{hist_error}}
-		{% endif %}
-		{% if own_post_error %}
-			{{own_post_error}}
-		{% endif %}
-		{% if login_error %}
-			{{login_error}}
-		{% endif %}
 	</div>
 	<div>
+		{% if user.username == post.create_user %}
+			<form action="/blog/editpost/{{post.key().id()}}">
+				<input type="submit" value="EDIT POST">
+			</form>
+			<form action="/blog/deletepost/{{post.key().id()}}">
+				<input type="submit" value="DELETE POST">
+			</form>
+		{% endif %}
+	</div>
+		{% if user.username != post.create_user %}
+			{% if user.username not in post.like_users %}
+				<div>
+					<a href="/blog/likepost/{{post.key().id()}}">Like</a>
+				</div>
+			{% else %}
+			<div>
+				<p>You liked this post</p>
+			</div>
+			{% endif %}
+		{% endif %}
+		{% if user.username %}
+			<a href="/blog/comment/{{post.key().id()}}">Comment</a>
+		{% endif %}
+	<div>
+		<ul>
 		{% for i in post.like_users %}
-			<h1>{{i}}</h1>
+			<li>{{i}}</li>
 		{% endfor %}
+		<ul>
+		{% for i in comments %}
+			<li><a href="/blog/viewcomment/{{i.key().id()}}">{{i.create_user}} WRITES: {{i.title}}</a></li>
+		{% endfor %}
+		</ul>
 	</div>
 </div>
 

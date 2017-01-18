@@ -21,6 +21,15 @@
 		<div>
 			{{i.likes}}
 		</div>
+		<div>
+			<form action="/blog/editpost/{{i.key().id()}}">
+				<input type="submit" value="EDIT POST">
+			</form>
+			<form action="/blog/deletepost/{{i.key().id()}}">
+				<input type="submit" value="DELETE POST">
+			</form>
+		</div>
+		<div>
 	</div>
 {% endfor %}
 

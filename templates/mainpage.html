@@ -34,7 +34,11 @@
 				{% endif %}
 			<div>
 				{% if current_user.username != i.create_user %}
+					{% if current_user.username not in i.like_users %}
 						<div><a href="/blog/likepost/{{i.key().id()}}">Like</a></div>
+					{% else %}
+						You liked this post
+					{% endif %}
 				{% endif %}
 		</div>
 		<br><br><hr>

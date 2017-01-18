@@ -1,0 +1,30 @@
+{% extends "homepage.html" %}
+
+{% block content %}
+
+<div>
+	{{post.body}}
+</div>
+<table>
+	<form method="post">
+		<tbody>
+			<tr>
+				<td>Title: </td>
+				<td><input type="text" name="title" value="{{title}}"></td>
+				<td>{{error_title}}</td>
+			</tr>
+			<tr>
+				<td>Body: </td>
+				<td><textarea name="body">{{body}}</textarea></td>
+				<td>{{error_body}}</td>
+			</tr>
+			<tr>
+				<td>
+					<input type="submit">
+				</td>
+			</tr>
+		</tbody>
+	</form>
+</table>
+
+{% endblock %}
