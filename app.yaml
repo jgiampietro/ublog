@@ -11,6 +11,9 @@ handlers:
 - url: /blog/bootstrap
   static_dir: bootstrap
 
+- url: /blog/.*/bootstrap
+  static_dir: bootstrap
+
 - url: /css
   static_dir: css
 

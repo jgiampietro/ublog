@@ -6,6 +6,7 @@ import hmac
 from string import letters
 import random
 import re
+import bleach
 
 from google.appengine.ext import db
 
@@ -286,7 +287,7 @@ class NewPost(Handler):
 		if self.read_cookie():
 			self.title = self.request.get("title")
 			self.body = self.request.get("body")
-			body = self.body.replace('\n', '<br>')
+			body = self.body.bleach.clean()
 			self.create_user = users.find_by_id(self.return_id_by_cookie())
 			error = False
 
