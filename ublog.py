@@ -6,7 +6,6 @@ import hmac
 from string import letters
 import random
 import re
-import bleach
 
 from google.appengine.ext import db
 
@@ -72,6 +71,10 @@ class Handler(webapp2.RequestHandler):
 		self.response.headers.add_header(
 			'Set-Cookie', 'user_id=; Path=/')
 
+	def replace(self, body):
+		content = body.replace('\n', '<br>')
+		return content
+
 
 
 class HomePage(Handler):
@@ -119,6 +122,10 @@ class blogposts(db.Model):
 	dislikes = db.IntegerProperty()
 	create_user = db.StringProperty(required = True)
 	like_users = db.StringListProperty()
+
+	def replace(self, text):
+		content = text.replace('\n', '<br>')
+		return content
 
 	@classmethod
 	def post(cls, title, body, create_user):
@@ -221,21 +228,22 @@ class LogIn(Handler):
 	def post(self):
 		self.username = self.request.get("username")
 		self.password = self.request.get("password")
+		error_password=""
+		error_username=""
 
 		c = users.find_by_un(self.username)
 
 		params = dict()
-
-		if c.username:
+		if c:
 			if check_pw(self.username, self.password, c.password):
 				self.login(c)
 				self.redirect('/blog/welcomepage')
 			else:
-				params['error_username'] = "Invalid username/password combination"
-				self.render("login.html", **params)
+				error_password = "Invalid username/password combination"
+				self.render("login.html", error_password=error_password)
 		else:
-			params['error_password'] = "No such user exists"
-			self.render("login.html", **params)
+			error_username = "No such username exists"
+			self.render("login.html", error_username=error_username)
 
 class WelcomePage(Handler):
 	def get(self):
@@ -287,7 +295,6 @@ class NewPost(Handler):
 		if self.read_cookie():
 			self.title = self.request.get("title")
 			self.body = self.request.get("body")
-			body = self.body.bleach.clean()
 			self.create_user = users.find_by_id(self.return_id_by_cookie())
 			error = False
 
@@ -305,16 +312,13 @@ class NewPost(Handler):
 				self.render("newpost.html", **params)
 
 			else:
-				c = blogposts.post(self.title, body, self.create_user.username)
+				c = blogposts.post(self.title, self.body, self.create_user.username)
 				c.put()
 				post_id = c.key().id()
 				self.redirect('/blog/postpage/%s' % post_id)
 		else:
 			params['login_error'] = "You must be logged in to post!"
 			self.render("newpost.html", **params)
-
-
-
 
 class PostPage(Handler):
 	def get(self, post_id):
@@ -379,7 +383,7 @@ class EditPost(Handler):
 		body = self.body.replace('\n', '<br>')
 
 		post.title = self.title
-		post.body = body
+		post.body = self.body
 		post.put()
 		self.redirect('/blog/postpage/%s' % str(post.key().id()))
 

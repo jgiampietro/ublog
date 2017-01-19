@@ -2,57 +2,81 @@
 
 {% block content %}
 
-<div>
-	<div>
-		<div>
-			{{post.title}}
+<div class="container">
+	<div class="row">
+		<div class="col-xs-6">
+			Created by: <b>{{post.create_user}}</b>
 		</div>
-		<div>
-			{{post.create_user}}
-		</div>
-		<div>
-			{{post.create_date.strftime('%b %d, %Y')}}
+		<div class="col-xs-6 text-right">
+			<em>Created on: {{post.create_date.strftime('%b %d, %Y')}}</em>
 		</div>
 	</div>
-	<div>
-		{{post.body}}
+	<div class="row">
+		<div class="col-xs-12 text-center">
+			<h1>{{post.title}}</h1>
+		</div>
 	</div>
-	<div>
-		{{post.likes}}
+	<div class="row">
+		<div class="col-xs-12">
+			{{post.replace(post.body | safe)}}
+		</div>
+		<br>
 	</div>
-	<div>
+	<div class="row">
+		<div class="col-xs-12">
+			<em>Likes: {{post.likes}}</em>
+		</div>
+	</div>
+	<div class="row">
 		{% if user.username == post.create_user %}
-			<form action="/blog/editpost/{{post.key().id()}}">
-				<input type="submit" value="EDIT POST">
-			</form>
-			<form action="/blog/deletepost/{{post.key().id()}}">
-				<input type="submit" value="DELETE POST">
-			</form>
+			<div class="col-xs-6 text-center">
+				<form action="/blog/editpost/{{post.key().id()}}">
+					<input type="submit" value="EDIT POST" class="btn btn-default">
+				</form>
+			</div>
+			<div class="col-xs-6 text-center">
+				<form action="/blog/deletepost/{{post.key().id()}}">
+					<input type="submit" value="DELETE POST" class="btn btn-default">
+				</form>
+			</div>
 		{% endif %}
+	<hr><hr>
 	</div>
 		{% if user.username != post.create_user %}
 			{% if user.username not in post.like_users %}
-				<div>
-					<a href="/blog/likepost/{{post.key().id()}}">Like</a>
+				<div class="row">
+					<div class="col-xs-12">
+						<a href="/blog/likepost/{{post.key().id()}}">Like</a>
+					</div>
 				</div>
 			{% else %}
-			<div>
-				<p>You liked this post</p>
+			<div class="row">
+				<div class="col-xs-12">You liked this post</div>
 			</div>
 			{% endif %}
 		{% endif %}
 		{% if user.username %}
 			<a href="/blog/comment/{{post.key().id()}}">Comment</a>
 		{% endif %}
-	<div>
-		<ul>
+	<div class="row">
+		<div class="col-xs-12">
+			<h4>Users who liked this post:</h4> 
+				{% for i in post.like_users %}
+					<b>{{i}},</b>
+				{% endfor %}
+		</div>
+	</div>
+	<hr><hr>
+<!-- 		<ul>
 		{% for i in post.like_users %}
 			<li>{{i}}</li>
-		{% endfor %}
+		{% endfor %} -->
+	<div class="row">
+		Comments:
 		<ul>
-		{% for i in comments %}
-			<li><a href="/blog/viewcomment/{{i.key().id()}}">{{i.create_user}} WRITES: {{i.title}}</a></li>
-		{% endfor %}
+			{% for i in comments %}
+				<li><a href="/blog/viewcomment/{{i.key().id()}}">{{i.create_user}} WRITES: {{i.title}}</a></li>
+			{% endfor %}
 		</ul>
 	</div>
 </div>

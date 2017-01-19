@@ -2,35 +2,46 @@
 
 {% block content %}
 
-{% for i in posts %}
-	<div>
-		<div>
-			<div>
-				<a href="/blog/postpage/{{i.key().id()}}">{{i.title}}</a>
+<div class="conatainer">
+	{% for i in posts %}
+		<div class="row">
+			<div class="col-xs-6">
+				Created by: <b>{{i.create_user}}</b>
 			</div>
-			<div>
-				{{i.create_user}}
-			</div>
-			<div>
-				{{i.create_date.strftime('%b %d, %Y')}}
+			<div class="col-xs-6 text-right">
+				<em>Created on: {{i.create_date.strftime('%b %d, %Y')}}</em>
 			</div>
 		</div>
-		<div>
-			{{i.body}}
+		<div class="row">
+				<div class="col-xs-12 text-center">
+					<h1>Title: <a href="/blog/postpage/{{i.key().id()}}">{{i.title}}</a></h1>
+				</div>
 		</div>
-		<div>
-			{{i.likes}}
+		<div class="row">
+			<div class="col-xs-12">
+				{{i.replace(i.body) | safe}}
+			</div>
+			<hr>
 		</div>
-		<div>
-			<form action="/blog/editpost/{{i.key().id()}}">
-				<input type="submit" value="EDIT POST">
-			</form>
-			<form action="/blog/deletepost/{{i.key().id()}}">
-				<input type="submit" value="DELETE POST">
-			</form>
+		<div class="row">
+			<div class="col-xs-12">
+				<em>Likes: {{i.likes}}</em>
+			</div>
 		</div>
-		<div>
-	</div>
-{% endfor %}
+		<div class="row">
+			<div class="col-xs-6 text-center">
+				<form action="/blog/editpost/{{i.key().id()}}">
+					<input type="submit" value="EDIT POST" class="btn btn-default">
+				</form>
+			</div>
+			<div class="col-xs-6 text-center">
+				<form action="/blog/deletepost/{{i.key().id()}}">
+					<input type="submit" value="DELETE POST" class="btn btn-default">
+				</form>
+			</div>
+		</div>
+		<hr><hr>
+	{% endfor %}
+</div>
 
 {% endblock %}

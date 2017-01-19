@@ -11,7 +11,7 @@
 			</tr>
 			<tr>
 				<td>Body: </td>
-				<td><textarea name="body">{{post.body}}</textarea></td>
+				<td><textarea name="body">{{post.body | safe}}</textarea></td>
 			</tr>
 			<tr>
 				<td><input type="submit"></td>
