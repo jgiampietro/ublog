@@ -14,6 +14,7 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), a
 
 secret = "007JamesBondStyleHashWhoa007"
 
+
 def make_salt():
 	return ''.join(random.choice(letters) for x in range(5))
 
@@ -88,12 +89,14 @@ class users(db.Model):
 	join_date = db.DateTimeProperty(auto_now_add = True)
 	liked_posts = db.StringListProperty()
 
+
 	@classmethod
-	def signup(cls, username, password, email=None):
+	def signup(cls, username, password, email=None, is_admin=None):
 		secure_pw = make_pw(username, password)
 		return users(username=username,
 					 password=secure_pw,
-					 email=email)
+					 email=email,
+					 is_admin=is_admin)
 
 	@classmethod
 	def find_by_id(cls, user_id):
@@ -112,7 +115,7 @@ class users(db.Model):
 		key = db.Key.from_path('users', int(user_entity))
 		c = db.get(key)
 		return c
-
+	
 
 class blogposts(db.Model):
 	title = db.StringProperty(required = True)
@@ -187,6 +190,13 @@ class SignUp(Handler):
 		self.password = self.request.get("password")
 		self.verify = self.request.get("verify")
 		self.email = self.request.get("email")
+		self.is_admin = self.request.get("is_admin")
+
+		if self.is_admin == "True":
+			self.is_admin = True
+		else:
+			self.is_admin = False
+
 		error=False
 
 		params=dict(username=self.username, email=self.email)
@@ -215,7 +225,7 @@ class SignUp(Handler):
 			self.render("signup.html", **params)
 
 		else:
-			c = users.signup(self.username, self.password, self.email)
+			c = users.signup(self.username, self.password, self.email, self.is_admin)
 			c.put()
 			self.login(c)
 			self.redirect('/blog/welcomepage')
@@ -259,11 +269,12 @@ class WelcomePage(Handler):
 class AdminPage(Handler):
 	def get(self):
 		if self.read_cookie():
+			user = users.find_by_id(self.return_id_by_cookie())
 			c = db.GqlQuery("SELECT * from users")
-			self.render("adminpage.html", users=c)
+			self.render("adminpage.html", users=c, user=user)
 		else:
 			error = "You must logged in to view this page!"
-			self.render("adminpage.html", error=error)
+			self.render("adminpage.html", error=error, user=None)
 
 class DeleteUser(Handler):
 	def get(self, user_id):
@@ -332,12 +343,13 @@ class PostPage(Handler):
 class MainPage(Handler):
 	def get(self):
 		posts = db.GqlQuery("SELECT * FROM blogposts order by create_date desc limit 10")
+
 		current_user = ""
 
 		if self.return_id_by_cookie():
 			current_user = users.find_by_id(self.return_id_by_cookie())
 
-		self.render("mainpage.html", posts=posts, current_user=current_user)
+		self.render("mainpage.html", posts=posts,  current_user=current_user)
 
 class LikePost(Handler):
 	def get(self, post_id):
@@ -398,6 +410,7 @@ class Comment(Handler):
 	def get(self, post_id):
 		post = blogposts.post_by_id(post_id)
 		self.render('comment.html', post=post)
+
 	def post(self, post_id):
 		if self.read_cookie():
 			self.comment_user = users.find_by_id(self.return_id_by_cookie())

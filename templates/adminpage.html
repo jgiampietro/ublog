@@ -6,32 +6,36 @@
 <p>{{error}}</p>
 {% endif %}
 
-<form action="/blog/deleteallposts">
-	<input type="submit" value="DELETE ALL POSTS">
-</form>
+{% if user.is_admin %}
+	<form action="/blog/deleteallposts">
+		<input type="submit" value="DELETE ALL POSTS">
+	</form>
 
-<table>
-	<theader>
+	<table>
+		<theader>
+			<tr>
+				<th>Username</th>
+				<th>Hashed Password</th>
+				<th>signup date</th>
+			</tr>
+		</theader>
+		<tbody>
+	{% for i in users %}
 		<tr>
-			<th>Username</th>
-			<th>Hashed Password</th>
-			<th>signup date</th>
+			<td>{{i.username}}</td>
+			<td>{{i.password}}</td>
+			<td>{{i.join_date.strftime('%b %d, %Y')}}</td>
+			<td>
+				<form action="/blog/deleteuser/{{i.key().id()}}">
+					<input type="submit" value="DELETE USER">
+				</form>
+			</td>
 		</tr>
-	</theader>
-	<tbody>
-{% for i in users %}
-	<tr>
-		<td>{{i.username}}</td>
-		<td>{{i.password}}</td>
-		<td>{{i.join_date.strftime('%b %d, %Y')}}</td>
-		<td>
-			<form action="/blog/deleteuser/{{i.key().id()}}">
-				<input type="submit" value="DELETE USER">
-			</form>
-		</td>
-	</tr>
-{% endfor %}	
-	</tbody>
-</table>
+	{% endfor %}	
+		</tbody>
+	</table>
+{% else %}
+<p>You must be an admin to view this page!</p>
+{% endif %}
 
 {% endblock %}
