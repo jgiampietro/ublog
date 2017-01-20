@@ -12,7 +12,10 @@
 		<label for="bodyinput">Body: </label>
 		<textarea name="body" rows="20" id="bodyinput"class="form-control">{{post.body | safe}}</textarea>
 	</div>
-	<input type="submit" class="btn btn-default">
+	<input type="submit" class="btn btn-success">
+	<form action="/blog">
+		<input type="submit" class="btn btn-failure" href="/blog/mainpage" value="Cancel">
+	</form>
 </form>
 
 {% endblock %}

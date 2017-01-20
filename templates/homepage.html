@@ -33,8 +33,10 @@
 					<li><a href="/blog/newpost">Make a new post</a></li>
 					<li><a href="/blog/myposts">View your own posts</a></li>
 					<li><a href="/blog/login">Log In</a></li>
-					<li><a href="/blog/logout">Log Out</a></li>
 					<li><a href="/blog/adminpage">Admin Page</a></li>
+					{% if logged_in %}
+					<li><a href="/blog/logout">Log Out</a></li>
+					{% endif %}
 				</ul>
 			</div>
 		</div>

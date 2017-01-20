@@ -14,7 +14,7 @@
 		</div>
 		<div class="row">
 			<div class="col-xs-12 title text-center">
-				<h1><b>Title:</b><a href="/blog/postpage/{{i.key().id()}}">{{i.title}}</a></h1>
+				<h1><b>Title:</b><a href="/blog/postpage/{{i.key().id()}}">{{i.title}}</a></h1>
 			</div>
 			<hr>
 		</div>
@@ -30,7 +30,7 @@
 			</div>
 		</div>
 		<div class ="row">
-			{% if current_user.username == i.create_user %}
+			{% if current_user.username == i.create_user or current_user.is_admin == True %}
 			<div class="buttons center-block text-center row">
 				<div class="col-xs-6">
 					<form action="/blog/editpost/{{i.key().id()}}">

@@ -14,11 +14,14 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), a
 
 secret = "007JamesBondStyleHashWhoa007"
 
-
+# some global functions for securing passwords and cookies
 def make_salt():
 	return ''.join(random.choice(letters) for x in range(5))
 
 def make_pw(username, password, salt = None):
+	"""Takes in a username and password, outputs
+	a secure password for database storage"""
+
 	if not salt:
 		salt = make_salt()
 
@@ -26,18 +29,27 @@ def make_pw(username, password, salt = None):
 	return  "%s|%s" % (salt, secure_pw)
 
 def check_pw(username, password, secure_pw):
+	"""Checks username and password against stored
+	password value"""
+
 	salt = secure_pw.split('|')[0]
 	return make_pw(username, password, salt) == secure_pw
 
 def make_secure_cookie(user_id):
+	"""Takes users datastore key and creates
+	an encrypted cookie for login persistence"""
+
 	secure_id = hmac.new(secret, user_id).hexdigest()
 	return "%s|%s" % (user_id, secure_id)
 
 def check_cookie(cookie):
+	"""pass in the users cookie, returns True/False
+	on whether the cookie is valid. Call Handler class
+	read_cookie to access"""
 	user_id = cookie.split('|')[0]
 	return make_secure_cookie(user_id) == cookie
 
-
+# Page specific common functions
 class Handler(webapp2.RequestHandler):
 	def write(self, *a, **kw):
 		self.response.out.write(*a, **kw)
@@ -60,6 +72,8 @@ class Handler(webapp2.RequestHandler):
 			return check_cookie(cookie)
 
 	def return_id_by_cookie(self):
+		"""gets the users datastore id number from
+		their cookie"""
 		users_cookie = self.request.cookies.get('user_id')
 		if users_cookie:
 			user_id = users_cookie.split('|')[0]
@@ -73,16 +87,33 @@ class Handler(webapp2.RequestHandler):
 			'Set-Cookie', 'user_id=; Path=/')
 
 	def replace(self, body):
+		"""pass in text you want to preserve whitespace
+		in while still keeping safe"""
 		content = body.replace('\n', '<br>')
 		return content
+
+	def is_logged_in(self):
+		"""checks if user is logged in so 
+		Log Out button appears appropriately"""
+		if self.read_cookie:
+			user_id = self.return_id_by_cookie()
+			if user_id:
+				logged_in = True
+			else:
+				logged_in = False
+		else:
+			logged_in = False
+		return logged_in
 
 
 
 class HomePage(Handler):
 	def get(self):
-		self.render('homepage.html')
+		logged_in = is_logged_in()
+		self.render('homepage.html', logged_in=logged_in)
 
 class users(db.Model):
+	"""DB stores site user data"""
 	username = db.StringProperty(required = True)
 	password = db.StringProperty(required = True)
 	is_admin = db.BooleanProperty()
@@ -117,6 +148,7 @@ class users(db.Model):
 	
 
 class blogposts(db.Model):
+	"""DB that stores post data"""
 	title = db.StringProperty(required = True)
 	body = db.TextProperty(required = True)
 	create_date = db.DateTimeProperty(auto_now_add = True)
@@ -149,6 +181,7 @@ class blogposts(db.Model):
 		return c
 
 class comments(db.Model):
+	"""DB for comment data"""
 	create_user = db.StringProperty(required = True)
 	title = db.StringProperty(required = True)
 	body = db.TextProperty(required = True)
@@ -181,8 +214,10 @@ def valid_email(email):
     return not email or email_RE.match(email)
 
 class SignUp(Handler):
+	"""Class for registering a new user"""
 	def get(self):
-		self.render("signup.html")
+		logged_in = self.is_logged_in()
+		self.render("signup.html", logged_in=logged_in)
 
 	def post(self):
 		self.username = self.request.get("username")
@@ -225,8 +260,10 @@ class SignUp(Handler):
 
 
 class LogIn(Handler):
+	"""class for logging in"""
 	def get(self):
-		self.render("login.html")
+		logged_in = self.is_logged_in()
+		self.render("login.html", logged_in=logged_in)
 
 	def post(self):
 		self.username = self.request.get("username")
@@ -249,36 +286,43 @@ class LogIn(Handler):
 			self.render("login.html", error_username=error_username)
 
 class WelcomePage(Handler):
+	"""Class to handle a successful login"""
 	def get(self):
 		user_id = self.return_id_by_cookie()
 		if user_id:
 			key = db.Key.from_path('users', user_id)
 			user_entity = db.get(key)
 			name = user_entity.username
-			self.render("welcomepage.html", name=name)
+			logged_in = True
+			self.render("welcomepage.html", name=name, logged_in=logged_in)
 		else:
 			self.redirect("/blog/login")
 
 class AdminPage(Handler):
+	"""Admin only controls, allows admins to delete
+	users, posts, and designate other users as admins"""
 	def get(self):
 		if self.read_cookie():
 			user = users.find_by_id(self.return_id_by_cookie())
+			logged_in = True
 			c = db.GqlQuery("SELECT * from users")
-			self.render("adminpage.html", users=c, user=user)
+			self.render("adminpage.html", users=c, user=user, logged_in=logged_in)
 		else:
 			error = "You must logged in to view this page!"
 			self.render("adminpage.html", error=error, user=None)
 
 class DeleteUser(Handler):
+	"""Class that is called when delete user button is used"""
 	def get(self, user_id):
 		key = db.Key.from_path('users', int(user_id))
 		c = db.get(key)
 		c.delete()
 		d = db.GqlQuery("SELECT * FROM users")
 
-		self.render("adminpage.html", users=d )
+		self.render("adminpage.html", users=d, logged_in=True )
 
 class DeleteAllPosts(Handler):
+	"""Class to empty all posts on admin page"""
 	def get(self):
 		for i in blogposts.all():
 			db.delete(i)
@@ -290,8 +334,11 @@ class LogOut(Handler):
 		self.redirect('/blog/signup')
 
 class NewPost(Handler):
+	"""checks user form input for validation and
+	completeness, makes a new post."""
 	def get(self):
-		self.render("newpost.html")
+		logged_in = self.is_logged_in()
+		self.render("newpost.html", logged_in=logged_in)
 
 	def post(self):
 		params = dict()
@@ -325,16 +372,20 @@ class NewPost(Handler):
 			self.render("newpost.html", **params)
 
 class PostPage(Handler):
+	"""Class for viewing any single post."""
 	def get(self, post_id):
 		post = blogposts.post_by_id(post_id)
 		self.user = ""
 		post_comments = comments.comments_by_post_id(str(post_id))
 		if self.read_cookie():
 			self.user = users.find_by_id(self.return_id_by_cookie())
-		self.render("postpage.html", post=post, user=self.user, comments=post_comments)
+			logged_in = self.is_logged_in()
+		self.render("postpage.html", post=post, user=self.user, comments=post_comments, logged_in=logged_in)
 
 class MainPage(Handler):
+	"""Main page for viewing 10 most recent blog entries."""
 	def get(self):
+		logged_in = self.is_logged_in()
 		posts = db.GqlQuery("SELECT * FROM blogposts order by create_date desc limit 10")
 
 		current_user = ""
@@ -342,9 +393,10 @@ class MainPage(Handler):
 		if self.return_id_by_cookie():
 			current_user = users.find_by_id(self.return_id_by_cookie())
 
-		self.render("mainpage.html", posts=posts,  current_user=current_user)
+		self.render("mainpage.html", posts=posts,  current_user=current_user, logged_in=logged_in)
 
 class LikePost(Handler):
+	"""Caled when a post is liked."""
 	def get(self, post_id):
 		if self.read_cookie():
 			self.like_user = users.find_by_id(self.return_id_by_cookie())
@@ -366,19 +418,23 @@ class LikePost(Handler):
 			self.write("You must be logged in to like a post")
 
 class MyPosts(Handler):
+	"""Class to view all of a users own posts."""
 	def get(self):
 		if self.read_cookie():
 			self.like_user = users.find_by_id(self.return_id_by_cookie())
 			c = blogposts.all().filter('create_user =', self.like_user.username)
-			self.render("myposts.html", posts=c)
+			logged_in = self.is_logged_in()
+			self.render("myposts.html", posts=c, logged_in=logged_in)
 		else:
 			self.redirect('/blog/login')
 
 class EditPost(Handler):
+	"""class for editing a post."""
 	def get(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
 		post = db.get(key)
-		self.render('editpost.html', post=post)
+		logged_in = True
+		self.render('editpost.html', post=post, logged_in=logged_in)
 
 	def post(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
@@ -396,6 +452,7 @@ class EditPost(Handler):
 			self.render("editpost.html", error=error)
 
 class DeletePost(Handler):
+	"""Delete a post."""
 	def get(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
 		post = db.get(key)
@@ -403,9 +460,11 @@ class DeletePost(Handler):
 		self.redirect('/blog/myposts')
 
 class Comment(Handler):
+	"""Validate a comment form then post one."""
 	def get(self, post_id):
 		post = blogposts.post_by_id(post_id)
-		self.render('comment.html', post=post)
+		logged_in = self.is_logged_in()
+		self.render('comment.html', post=post, logged_in=logged_in)
 
 	def post(self, post_id):
 		if self.read_cookie():
@@ -437,14 +496,18 @@ class Comment(Handler):
 			self.redirect('/blog/login')
 
 class ViewComment(Handler):
+	"""View an individual comment"""
 	def get(self, comment_id):
 		key = db.Key.from_path('comments', int(comment_id))
 		comment = db.get(key)
-		self.render("viewcomment.html", comment=comment)
+		logged_in = self.is_logged_in()
+		self.render("viewcomment.html", comment=comment, logged_in=logged_in)
 
 class ChangePassword(Handler):
+	"""Class for users to change their own password"""
 	def get(self, user_id):
-		self.render("changepassword.html")
+		logged_in = self.is_logged_in()
+		self.render("changepassword.html", logged_in=logged_in)
 
 	def post(self, user_id):
 		key = db.Key.from_path('users', int(user_id))
@@ -465,6 +528,7 @@ class ChangePassword(Handler):
 			self.render("changepassword.html", error=error)
 
 class MakeAdmin(Handler):
+	"""Class for admins to make other users admins"""
 	def get(self, user_id):
 		key = db.Key.from_path('users', int(user_id))
 		user = db.get(key)
@@ -477,10 +541,6 @@ class MakeAdmin(Handler):
 		user.put()
 		
 		self.redirect('/blog/adminpage')
-
-
-
-
 
 app = webapp2.WSGIApplication([('/', HomePage),
 							   ('/blog', MainPage),
