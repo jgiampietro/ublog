@@ -1,3 +1,7 @@
 .post-body {
 	background: rgba(140, 153, 173, 0.2);
 }
+
+.error {
+	color: red;
+}

@@ -2,29 +2,21 @@
 
 {% block content %}
 
-<div>
-	{{post.body}}
+<div class="col-xs-12 post-body">
+	{{post.replace(post.body) | safe}}
 </div>
-<table>
-	<form method="post">
-		<tbody>
-			<tr>
-				<td>Title: </td>
-				<td><input type="text" name="title" value="{{title}}"></td>
-				<td>{{error_title}}</td>
-			</tr>
-			<tr>
-				<td>Body: </td>
-				<td><textarea name="body">{{body}}</textarea></td>
-				<td>{{error_body}}</td>
-			</tr>
-			<tr>
-				<td>
-					<input type="submit">
-				</td>
-			</tr>
-		</tbody>
-	</form>
-</table>
+<form method="post">
+	<div class="form-group">
+		<label for="titleinput">Title: </label>
+		<input type="text" class="form-control" id="titleinput" name="title" value="{{title}}">
+		<small id="errortitle" class="form-text text-muted">{{error_title}}</small>
+	</div>
+	<div class="form-group">
+		<label for="bodyinput">Body: </label>
+		<textarea name="body" class="form-control" id="bodyinput">{{body}}</textarea>
+		<small id="errorbody" class="form-text text-muted">{{error_body}}</small>
+	</div>
+	<input type="submit" class="btn btn-default">
+</form>
 
 {% endblock %}

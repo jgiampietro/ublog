@@ -20,6 +20,9 @@ handlers:
 - url: /blog/css
   static_dir: css
 
+- url: /blog/.*/css
+  static_dir: css
+
 - url: .*
   script: ublog.app
 

@@ -95,8 +95,7 @@ class users(db.Model):
 		secure_pw = make_pw(username, password)
 		return users(username=username,
 					 password=secure_pw,
-					 email=email,
-					 is_admin=is_admin)
+					 email=email)
 
 	@classmethod
 	def find_by_id(cls, user_id):
@@ -190,12 +189,6 @@ class SignUp(Handler):
 		self.password = self.request.get("password")
 		self.verify = self.request.get("verify")
 		self.email = self.request.get("email")
-		self.is_admin = self.request.get("is_admin")
-
-		if self.is_admin == "True":
-			self.is_admin = True
-		else:
-			self.is_admin = False
 
 		error=False
 
@@ -225,7 +218,7 @@ class SignUp(Handler):
 			self.render("signup.html", **params)
 
 		else:
-			c = users.signup(self.username, self.password, self.email, self.is_admin)
+			c = users.signup(self.username, self.password, self.email)
 			c.put()
 			self.login(c)
 			self.redirect('/blog/welcomepage')
@@ -392,12 +385,15 @@ class EditPost(Handler):
 		post = db.get(key)
 		self.title = self.request.get("title")
 		self.body = self.request.get("body")
-		body = self.body.replace('\n', '<br>')
 
-		post.title = self.title
-		post.body = self.body
-		post.put()
-		self.redirect('/blog/postpage/%s' % str(post.key().id()))
+		if self.title and self.body:
+			post.title = self.title
+			post.body = self.body
+			post.put()
+			self.redirect('/blog/postpage/%s' % str(post.key().id()))
+		else:
+			error = "Please enter a title and body"
+			self.render("editpost.html", error=error)
 
 class DeletePost(Handler):
 	def get(self, post_id):
@@ -446,6 +442,43 @@ class ViewComment(Handler):
 		comment = db.get(key)
 		self.render("viewcomment.html", comment=comment)
 
+class ChangePassword(Handler):
+	def get(self, user_id):
+		self.render("changepassword.html")
+
+	def post(self, user_id):
+		key = db.Key.from_path('users', int(user_id))
+		user = db.get(key)
+		self.password = self.request.get("password")
+		self.verify = self.request.get("verify")
+		error = ""
+		if valid_password(self.password):
+			if self.password == self.verify:
+				user.password = self.password
+				user.put()
+				self.redirect('/blog/adminpage')
+			else:
+				error = "Passwords do not match"
+				self.render("changepassword.html", error=error)
+		else:
+			error = "Password is not valid"
+			self.render("changepassword.html", error=error)
+
+class MakeAdmin(Handler):
+	def get(self, user_id):
+		key = db.Key.from_path('users', int(user_id))
+		user = db.get(key)
+
+		if user.is_admin:
+			user.is_admin = False
+		else:
+			user.is_admin = True
+
+		user.put()
+		
+		self.redirect('/blog/adminpage')
+
+
 
 
 
@@ -455,7 +488,9 @@ app = webapp2.WSGIApplication([('/', HomePage),
 							   ('/blog/login', LogIn),
 							   ('/blog/welcomepage', WelcomePage),
 							   ('/blog/adminpage', AdminPage),
+							   ('/blog/changepassword/(\d+)', ChangePassword),
 							   ('/blog/deleteuser/(\d+)', DeleteUser),
+							   ('/blog/makeadmin/(\d+)', MakeAdmin),
 							   ('/blog/deleteallposts', DeleteAllPosts),
 							   ('/blog/postpage/(\d+)', PostPage),
 							   ('/blog/newpost', NewPost),

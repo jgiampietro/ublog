@@ -2,40 +2,58 @@
 
 {% block content %}
 
-{% if error %}
-<p>{{error}}</p>
-{% endif %}
+{% if user %}
+	{% if error %}
+	<p>{{error}}</p>
+	{% endif %}
 
-{% if user.is_admin %}
-	<form action="/blog/deleteallposts">
-		<input type="submit" value="DELETE ALL POSTS">
-	</form>
+	<div class="form-group">
+		<form action="/blog/changepassword/{{user.key().id()}}">
+			<input type="submit" class="btn btn-default" value="Change my Password">
+		</form>
+	</div>
 
-	<table>
-		<theader>
+	{% if user.is_admin %}
+		<div class="form-group">
+			<form action="/blog/deleteallposts">
+				<input type="submit" class="btn btn-default" value="DELETE ALL POSTS">
+			</form>
+
+		<table class="table table-striped">
+			<thead>
+				<tr>
+					<th>Username</th>
+					<th>signup date</th>
+					<th>Is admin</th>
+					<th>Toggle admin</th>
+					<th>Delete user</th>
+				</tr>
+			</thead>
+			<tbody>
+		{% for i in users %}
 			<tr>
-				<th>Username</th>
-				<th>Hashed Password</th>
-				<th>signup date</th>
+				<td>{{i.username}}</td>
+				<td>{{i.join_date.strftime('%b %d, %Y')}}</td>
+				<td>{% if not i.is_admin %} False {% else %} {{i.is_admin}} {% endif %}</td>
+				<td>
+					<form action="/blog/makeadmin/{{i.key().id()}}">
+						<input type="submit" class="btn btn-success" value="Toggle Admin">
+					</form>
+				</td>
+				<td>
+					<form action="/blog/deleteuser/{{i.key().id()}}">
+						<input type="submit" class="btn btn-warning" value="DELETE USER">
+					</form>
+				</td>
 			</tr>
-		</theader>
-		<tbody>
-	{% for i in users %}
-		<tr>
-			<td>{{i.username}}</td>
-			<td>{{i.password}}</td>
-			<td>{{i.join_date.strftime('%b %d, %Y')}}</td>
-			<td>
-				<form action="/blog/deleteuser/{{i.key().id()}}">
-					<input type="submit" value="DELETE USER">
-				</form>
-			</td>
-		</tr>
-	{% endfor %}	
-		</tbody>
-	</table>
+		{% endfor %}	
+			</tbody>
+		</table>
+	{% else %}
+	<p>You must be an admin to view this page!</p>
+	{% endif %}
 {% else %}
-<p>You must be an admin to view this page!</p>
+<p>You must be logged in to view this page!</p>
 {% endif %}
 
 {% endblock %}
