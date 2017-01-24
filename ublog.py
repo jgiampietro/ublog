@@ -317,9 +317,8 @@ class DeleteUser(Handler):
 		key = db.Key.from_path('users', int(user_id))
 		c = db.get(key)
 		c.delete()
-		d = db.GqlQuery("SELECT * FROM users")
 
-		self.render("adminpage.html", users=d, logged_in=True )
+		self.redirect("/adminpage")
 
 class DeleteAllPosts(Handler):
 	"""Class to empty all posts on admin page"""
