@@ -109,7 +109,7 @@ class Handler(webapp2.RequestHandler):
 
 class HomePage(Handler):
 	def get(self):
-		logged_in = is_logged_in()
+		logged_in = self.is_logged_in()
 		self.render('homepage.html', logged_in=logged_in)
 
 class users(db.Model):
@@ -324,9 +324,20 @@ class DeleteUser(Handler):
 class DeleteAllPosts(Handler):
 	"""Class to empty all posts on admin page"""
 	def get(self):
-		for i in blogposts.all():
-			db.delete(i)
-		self.redirect('/')
+		if self.read_cookie():
+			user = users.find_by_id(self.return_id_by_cookie())
+			if user.is_admin == True:
+
+				for i in blogposts.all():
+					db.delete(i)
+
+				self.redirect('/blog')
+			else:
+				self.write("You do not have access to this function!")
+		else:
+			self.write("You do not have access to this function!")
+
+
 
 class LogOut(Handler):
 	def get(self):
@@ -377,6 +388,7 @@ class PostPage(Handler):
 		post = blogposts.post_by_id(post_id)
 		self.user = ""
 		post_comments = comments.comments_by_post_id(str(post_id))
+		logged_in = False
 		if self.read_cookie():
 			self.user = users.find_by_id(self.return_id_by_cookie())
 			logged_in = self.is_logged_in()
@@ -421,10 +433,15 @@ class MyPosts(Handler):
 	"""Class to view all of a users own posts."""
 	def get(self):
 		if self.read_cookie():
-			self.like_user = users.find_by_id(self.return_id_by_cookie())
-			c = blogposts.all().filter('create_user =', self.like_user.username)
+			self.user = users.find_by_id(self.return_id_by_cookie())
+			c = blogposts.all().filter('create_user =', self.user.username)
 			logged_in = self.is_logged_in()
-			self.render("myposts.html", posts=c, logged_in=logged_in)
+			d = c.get()
+			if d:
+				self.render("myposts.html", posts=c, logged_in=logged_in)
+			else:
+				message = "You have no posts! You need to gets to writing!"
+				self.render("myposts.html", message=message, logged_in=logged_in)
 		else:
 			self.redirect('/blog/login')
 
@@ -433,8 +450,13 @@ class EditPost(Handler):
 	def get(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
 		post = db.get(key)
-		logged_in = True
-		self.render('editpost.html', post=post, logged_in=logged_in)
+		logged_in = self.is_logged_in()
+		if self.read_cookie():
+			user = users.find_by_id(self.return_id_by_cookie())
+			if user.username == post.create_user or user.is_admin == True:
+				self.render('editpost.html', post=post, logged_in=logged_in)
+		else:
+			self.write("You do not have access to this function!")
 
 	def post(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
@@ -456,15 +478,25 @@ class DeletePost(Handler):
 	def get(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
 		post = db.get(key)
-		post.delete()
-		self.redirect('/blog/myposts')
+		if self.read_cookie():
+			user = users.find_by_id(self.return_id_by_cookie())
+			if user.username == post.create_user or user.is_admin == True:
+				post.delete()
+				self.redirect('/blog/myposts')
+			else:
+				self.write("You do not have access to this function!")
+		else:
+			self.write("You do not have access to this function!")
 
 class Comment(Handler):
 	"""Validate a comment form then post one."""
 	def get(self, post_id):
 		post = blogposts.post_by_id(post_id)
 		logged_in = self.is_logged_in()
-		self.render('comment.html', post=post, logged_in=logged_in)
+		if self.is_logged_in():
+			self.render('comment.html', post=post, logged_in=logged_in)
+		else:
+			self.redirect('/blog/login')
 
 	def post(self, post_id):
 		if self.read_cookie():
