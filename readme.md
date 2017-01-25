@@ -49,3 +49,12 @@ Note that the user will be created as username "admin" and password of "password
 8. Find the user you added in step 3, click the button to toggle admin priveledges.
 9. Logout, then login is as user from step 3.
 10. Navigate to the admin page and delete the admin user.
+
+## Improvements
+The following would be welcome additions to the code base:
+* A way to limit the length allowed on the main page for each post body, with a blue "more" to take you to the permalink page. Right now, "/blog" allows up to 10 posts of indefinite length. This could get a bit long, particularly on mobile
+* Forgot password function would be nice!
+* Many more. This is an amateur project, after all...
+
+## Credit Due
+This was created with material provided by Udacity, so this code is probably similar to about 10m other apps on here. However, this app is mine. There are many like it, but this one is mine :) You, however, can do whatever you want with it.
