@@ -49,8 +49,9 @@ def check_cookie(cookie):
 	user_id = cookie.split('|')[0]
 	return make_secure_cookie(user_id) == cookie
 
+
 # Page specific common functions
-class Handler(webapp2.RequestHandler):
+class Handler(webapp2.RequestHandler):	
 	def write(self, *a, **kw):
 		self.response.out.write(*a, **kw)
 
@@ -70,6 +71,15 @@ class Handler(webapp2.RequestHandler):
 		cookie = self.request.cookies.get('user_id')
 		if cookie:
 			return check_cookie(cookie)
+
+	def check_admin(self):
+		"""Checks to see if an admin user exists
+		renders gen_admin if not"""
+		c = users.all().filter("is_admin =", True).get()
+		if c:
+			return True
+		else:
+			return False
 
 	def return_id_by_cookie(self):
 		"""gets the users datastore id number from
@@ -116,7 +126,7 @@ class users(db.Model):
 	"""DB stores site user data"""
 	username = db.StringProperty(required = True)
 	password = db.StringProperty(required = True)
-	is_admin = db.BooleanProperty()
+	is_admin = db.BooleanProperty(default = False)
 	join_date = db.DateTimeProperty(auto_now_add = True)
 	liked_posts = db.StringListProperty()
 
@@ -213,11 +223,15 @@ def valid_email(email):
     email_RE  = re.compile(r'^[\S]+@[\S]+\.[\S]+$')
     return not email or email_RE.match(email)
 
+
+
 class SignUp(Handler):
-	"""Class for registering a new user"""
+	"""Class for registering a new user, if admin
+	exists """
 	def get(self):
 		logged_in = self.is_logged_in()
-		self.render("signup.html", logged_in=logged_in)
+		admin_made = self.check_admin()
+		self.render("signup.html", logged_in=logged_in, admin_made=admin_made)
 
 	def post(self):
 		self.username = self.request.get("username")
@@ -318,7 +332,7 @@ class DeleteUser(Handler):
 		c = db.get(key)
 		c.delete()
 
-		self.redirect("/adminpage")
+		self.redirect("/blog/adminpage")
 
 class DeleteAllPosts(Handler):
 	"""Class to empty all posts on admin page"""
@@ -503,6 +517,7 @@ class Comment(Handler):
 			self.title = self.request.get("title")
 			self.body = self.request.get("body")
 			self.post = post_id
+			post = blogposts.post_by_id(post_id)
 			error = False
 			error_title = ""
 			error_body = ""
@@ -520,7 +535,7 @@ class Comment(Handler):
 				c.put()
 				self.redirect('/blog/postpage/%s' % self.post)
 			else:
-				self.render('comment.html', post=self.post, error_title=error_title,
+				self.render('comment.html', post=post, error_title=error_title,
 											error_body=error_body, title=self.title,
 											body=self.body)
 		else:
@@ -543,20 +558,30 @@ class ChangePassword(Handler):
 	def post(self, user_id):
 		key = db.Key.from_path('users', int(user_id))
 		user = db.get(key)
+		self.current_password = self.request.get("current_password")
 		self.password = self.request.get("password")
 		self.verify = self.request.get("verify")
-		error = ""
-		if valid_password(self.password):
-			if self.password == self.verify:
-				user.password = self.password
-				user.put()
-				self.redirect('/blog/adminpage')
-			else:
-				error = "Passwords do not match"
-				self.render("changepassword.html", error=error)
+		params = dict()
+		error = False
+
+		if not valid_password(self.password):
+			error = True
+			params['error_valid'] = "New password is not valid"
+
+		if not self.password == self.verify:
+			error = True
+			params['error_verify'] = "Passwords do not match"
+
+		if not check_pw(user.username, self.current_password, user.password):
+			error = True
+			params['error_current'] = "That is not the correct password"
+
+		if error:
+			self.render("changepassword.html", **params)
 		else:
-			error = "Password is not valid"
-			self.render("changepassword.html", error=error)
+			user.password = make_pw(user.username, self.password)
+			user.put()
+			self.redirect('/blog')
 
 class MakeAdmin(Handler):
 	"""Class for admins to make other users admins"""
@@ -572,6 +597,16 @@ class MakeAdmin(Handler):
 		user.put()
 		
 		self.redirect('/blog/adminpage')
+
+class GenAdmin(Handler):
+	"""Will generate a generic admin for first-time users,
+	called on signup.html if check_admin returns no users with
+	admin priveledges"""
+	def get(self):
+		password = make_pw("admin", "password")
+		c = users(username="admin", password=password, is_admin=True)
+		c.put()
+		self.redirect('/blog/login')
 
 app = webapp2.WSGIApplication([('/', HomePage),
 							   ('/blog', MainPage),
@@ -591,5 +626,6 @@ app = webapp2.WSGIApplication([('/', HomePage),
 							   ('/blog/comment/(\d+)', Comment),
 							   ('/blog/viewcomment/(\d+)', ViewComment),
 							   ('/blog/myposts', MyPosts),
+							   ('/blog/genadmin', GenAdmin),
 							   ('/blog/logout', LogOut)],
 								debug=True)

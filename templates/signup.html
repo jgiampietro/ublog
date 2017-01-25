@@ -2,6 +2,14 @@
 
 {% block content %}
 
+{% if not admin_made %}
+<div class="row">
+	<form action="/blog/genadmin">
+		<input type="submit" value="MAKE ADMIN" class="btn btn-primary">
+	</form>
+</div>
+{% endif %}
+
 <form method ="post">
 	<div class="form-group">
 		<label for="usernameinput">Username: </label>
