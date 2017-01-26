@@ -1,0 +1,20 @@
+{% extends "homepage.html" %}
+
+{% block content %}
+
+<form method="post">
+	<div class="form-group">
+		<label for="title">Title: </label>
+		<input type="text" id="title" name="title" class="form-control" value="{{comment.title}}">
+		<small id="titleerror" class="form-text text-muted error">{{title_error}}</small>
+	</div>
+	<div class="form-group">
+		<label for="body">Body: </label>
+		<textarea class="form-control" name="body" id="body" rows="5">{{comment.body}}</textarea>
+		<small id="bodyerror" class="form-text text-muted error">{{body_error}}</small>
+	</div>
+	<input type="submit" class="btn btn-default">
+</form>
+
+{% endblock %}
+

@@ -10,48 +10,51 @@ import re
 from google.appengine.ext import db
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape = True)
+jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
+                               autoescape=True)
 
 secret = "007JamesBondStyleHashWhoa007"
 
 # some global functions for securing passwords and cookies
+
+
 def make_salt():
-	return ''.join(random.choice(letters) for x in range(5))
+    return ''.join(random.choice(letters) for x in range(5))
 
-def make_pw(username, password, salt = None):
-	"""Takes in a username and password, outputs
-	a secure password for database storage"""
 
-	if not salt:
-		salt = make_salt()
+def make_pw(username, password, salt=None):
+    """Takes in a username and password, outputs
+    a secure password for database storage"""
+    if not salt:
+        salt = make_salt()
+    secure_pw = hashlib.sha256(username + password + salt).hexdigest()
+    return  "%s|%s" % (salt, secure_pw)
 
-	secure_pw = hashlib.sha256(username + password + salt).hexdigest()
-	return  "%s|%s" % (salt, secure_pw)
 
 def check_pw(username, password, secure_pw):
-	"""Checks username and password against stored
-	password value"""
+    """Checks username and password against stored
+    password value"""
+    salt = secure_pw.split('|')[0]
+    return make_pw(username, password, salt) == secure_pw
 
-	salt = secure_pw.split('|')[0]
-	return make_pw(username, password, salt) == secure_pw
 
 def make_secure_cookie(user_id):
-	"""Takes users datastore key and creates
-	an encrypted cookie for login persistence"""
+    """Takes users datastore key and creates
+    an encrypted cookie for login persistence"""
+    secure_id = hmac.new(secret, user_id).hexdigest()
+    return "%s|%s" % (user_id, secure_id)
 
-	secure_id = hmac.new(secret, user_id).hexdigest()
-	return "%s|%s" % (user_id, secure_id)
 
 def check_cookie(cookie):
-	"""pass in the users cookie, returns True/False
-	on whether the cookie is valid. Call Handler class
-	read_cookie to access"""
-	user_id = cookie.split('|')[0]
-	return make_secure_cookie(user_id) == cookie
+    """pass in the users cookie, returns True/False
+    on whether the cookie is valid. Call Handler class
+    read_cookie to access"""
+    user_id = cookie.split('|')[0]
+    return make_secure_cookie(user_id) == cookie
 
 
 # Page specific common functions
-class Handler(webapp2.RequestHandler):	
+class Handler(webapp2.RequestHandler):
 	def write(self, *a, **kw):
 		self.response.out.write(*a, **kw)
 
@@ -103,7 +106,7 @@ class Handler(webapp2.RequestHandler):
 		return content
 
 	def is_logged_in(self):
-		"""checks if user is logged in so 
+		"""checks if user is logged in so
 		Log Out button appears appropriately"""
 		if self.read_cookie:
 			user_id = self.return_id_by_cookie()
@@ -116,27 +119,26 @@ class Handler(webapp2.RequestHandler):
 		return logged_in
 
 
-
 class HomePage(Handler):
 	def get(self):
 		logged_in = self.is_logged_in()
 		self.render('homepage.html', logged_in=logged_in)
 
+
 class users(db.Model):
 	"""DB stores site user data"""
-	username = db.StringProperty(required = True)
-	password = db.StringProperty(required = True)
-	is_admin = db.BooleanProperty(default = False)
-	join_date = db.DateTimeProperty(auto_now_add = True)
+	username = db.StringProperty(required=True)
+	password = db.StringProperty(required=True)
+	is_admin = db.BooleanProperty(default=False)
+	join_date = db.DateTimeProperty(auto_now_add=True)
 	liked_posts = db.StringListProperty()
-
 
 	@classmethod
 	def signup(cls, username, password, email=None, is_admin=None):
 		secure_pw = make_pw(username, password)
 		return users(username=username,
-					 password=secure_pw,
-					 email=email)
+                    password=secure_pw,
+                    email=email)
 
 	@classmethod
 	def find_by_id(cls, user_id):
@@ -155,16 +157,16 @@ class users(db.Model):
 		key = db.Key.from_path('users', int(user_entity))
 		c = db.get(key)
 		return c
-	
+
 
 class blogposts(db.Model):
 	"""DB that stores post data"""
-	title = db.StringProperty(required = True)
-	body = db.TextProperty(required = True)
-	create_date = db.DateTimeProperty(auto_now_add = True)
+	title = db.StringProperty(required=True)
+	body = db.TextProperty(required=True)
+	create_date = db.DateTimeProperty(auto_now_add=True)
 	likes = db.IntegerProperty()
 	dislikes = db.IntegerProperty()
-	create_user = db.StringProperty(required = True)
+	create_user = db.StringProperty(required=True)
 	like_users = db.StringListProperty()
 
 	def replace(self, text):
@@ -174,10 +176,9 @@ class blogposts(db.Model):
 	@classmethod
 	def post(cls, title, body, create_user):
 		return blogposts(title=title,
-						 body=body,
-						 create_user=create_user,
-						 likes=0)
-
+                        body=body,
+                        create_user=create_user,
+                        likes=0)
 	@classmethod
 	def return_key(cls, post_key):
 		key = db.Key.from_path('blogposts', int(post_key))
@@ -190,13 +191,14 @@ class blogposts(db.Model):
 		c = db.get(key)
 		return c
 
+
 class comments(db.Model):
 	"""DB for comment data"""
-	create_user = db.StringProperty(required = True)
-	title = db.StringProperty(required = True)
-	body = db.TextProperty(required = True)
-	create_date = db.DateTimeProperty(auto_now_add = True)
-	post = db.StringProperty(required = True)
+	create_user = db.StringProperty(required=True)
+	title = db.StringProperty(required=True)
+	body = db.TextProperty(required=True)
+	create_date = db.DateTimeProperty(auto_now_add=True)
+	post = db.StringProperty(required=True)
 
 	@classmethod
 	def post_comment(cls, create_user, title, body, post):
@@ -405,20 +407,20 @@ class PostPage(Handler):
 		if self.read_cookie():
 			self.user = users.find_by_id(self.return_id_by_cookie())
 			logged_in = self.is_logged_in()
-		self.render("postpage.html", post=post, user=self.user, comments=post_comments, logged_in=logged_in)
+		self.render("postpage.html", post=post, user=self.user,
+					 comments=post_comments, logged_in=logged_in)
 
 class MainPage(Handler):
 	"""Main page for viewing 10 most recent blog entries."""
 	def get(self):
 		logged_in = self.is_logged_in()
 		posts = db.GqlQuery("SELECT * FROM blogposts order by create_date desc limit 10")
-
 		current_user = ""
-
 		if self.return_id_by_cookie():
 			current_user = users.find_by_id(self.return_id_by_cookie())
 
-		self.render("mainpage.html", posts=posts,  current_user=current_user, logged_in=logged_in)
+		self.render("mainpage.html", posts=posts, 
+			         current_user=current_user, logged_in=logged_in)
 
 class LikePost(Handler):
 	"""Caled when a post is liked."""
@@ -477,14 +479,21 @@ class EditPost(Handler):
 		self.title = self.request.get("title")
 		self.body = self.request.get("body")
 
-		if self.title and self.body:
-			post.title = self.title
-			post.body = self.body
-			post.put()
-			self.redirect('/blog/postpage/%s' % str(post.key().id()))
+		if self.read_cookie():
+			user = users.find_by_id(self.return_id_by_cookie())
+			if user.username == post.create_user or user.is_admin == True:
+				if self.title and self.body:
+					post.title = self.title
+					post.body = self.body
+					post.put()
+					self.redirect('/blog/postpage/%s' % str(post.key().id()))
+				else:
+					error = "Please enter a title and body"
+					self.render("editpost.html", error=error)
+			else:
+				self.write("You do not have access to this function!")
 		else:
-			error = "Please enter a title and body"
-			self.render("editpost.html", error=error)
+			self.write("You do not have access to this function!")
 
 class DeletePost(Handler):
 	"""Delete a post."""
@@ -547,7 +556,10 @@ class ViewComment(Handler):
 		key = db.Key.from_path('comments', int(comment_id))
 		comment = db.get(key)
 		logged_in = self.is_logged_in()
-		self.render("viewcomment.html", comment=comment, logged_in=logged_in)
+		user = None
+		if self.read_cookie():
+			user = users.find_by_id(self.return_id_by_cookie())
+		self.render("viewcomment.html", comment=comment, logged_in=logged_in, user=user)
 
 class ChangePassword(Handler):
 	"""Class for users to change their own password"""
@@ -608,6 +620,62 @@ class GenAdmin(Handler):
 		c.put()
 		self.redirect('/blog/login')
 
+class EditComment(Handler):
+	"""Class used to edit comments"""
+	def get(self, comment_id):
+		key = db.Key.from_path('comments', int(comment_id))
+		comment = db.get(key)
+		self.render("editcomment.html", comment=comment)
+
+	def post(self, comment_id):
+		key = db.Key.from_path('comments', int(comment_id))
+		comment = db.get(key)
+		params = dict()
+		error = False
+		if self.read_cookie():
+			user = users.find_by_id(self.return_id_by_cookie())
+
+		self.title = self.request.get("title")
+		self.body = self.request.get("body")
+
+		if not self.title:
+			error = True
+			params['title_error'] = "Please make sure there is a title"
+
+		if not self.body:
+			error = True
+			params['body_error'] = "Please make sure there is a body"
+
+		if not user.username == comment.create_user or user.is_admin == True:
+			error = True
+			params['access_error'] = "You do not have the proper credentials to edit this post!"
+
+		if not error:
+			comment.title = self.title
+			comment.body = self.body
+			comment.put()
+			self.redirect('/blog/viewcomment/%s' % str(comment.key().id()))
+		else:
+			self.render("editcomment.html", comment=comment, **params)
+
+class DeleteComment(Handler):
+	def get(self, comment_id):
+		key = db.Key.from_path('comments', int(comment_id))
+		comment = db.get(key)
+		post_key = db.Key.from_path('blogposts', int(comment.post))
+		post = db.get(post_key)
+		if self.read_cookie():
+			user = users.find_by_id(self.return_id_by_cookie())
+			if user.username == comment.create_user or user.is_admin == True:
+				comment.delete()
+				self.redirect('/blog/postpage/%s' % str(post.key().id()))
+			else:
+				self.write("You don't have access to this function!")
+		else:
+			self.write("You don't have access to this function!")
+
+		
+
 app = webapp2.WSGIApplication([('/', HomePage),
 							   ('/blog', MainPage),
 							   ('/blog/signup', SignUp),
@@ -627,5 +695,7 @@ app = webapp2.WSGIApplication([('/', HomePage),
 							   ('/blog/viewcomment/(\d+)', ViewComment),
 							   ('/blog/myposts', MyPosts),
 							   ('/blog/genadmin', GenAdmin),
+							   ('/blog/editcomment/(\d+)', EditComment),
+							   ('/blog/deletecomment/(\d+)', DeleteComment),
 							   ('/blog/logout', LogOut)],
 								debug=True)
