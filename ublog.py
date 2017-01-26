@@ -53,6 +53,7 @@ def check_cookie(cookie):
     return make_secure_cookie(user_id) == cookie
 
 
+
 # Page specific common functions
 class Handler(webapp2.RequestHandler):
 	def write(self, *a, **kw):
@@ -117,7 +118,6 @@ class Handler(webapp2.RequestHandler):
 		else:
 			logged_in = False
 		return logged_in
-
 
 class HomePage(Handler):
 	def get(self):
@@ -357,19 +357,23 @@ class DeleteAllPosts(Handler):
 class LogOut(Handler):
 	def get(self):
 		self.logout()
-		self.redirect('/blog/signup')
+		self.redirect('/blog/login')
 
 class NewPost(Handler):
 	"""checks user form input for validation and
 	completeness, makes a new post."""
 	def get(self):
 		logged_in = self.is_logged_in()
-		self.render("newpost.html", logged_in=logged_in)
+		if logged_in:
+			self.render("newpost.html", logged_in=logged_in)
+		else:
+			self.redirect('/blog/login')
 
 	def post(self):
-		params = dict()
+		if self.is_logged_in():
 
-		if self.read_cookie():
+			params = dict()
+
 			self.title = self.request.get("title")
 			self.body = self.request.get("body")
 			self.create_user = users.find_by_id(self.return_id_by_cookie())
@@ -401,14 +405,17 @@ class PostPage(Handler):
 	"""Class for viewing any single post."""
 	def get(self, post_id):
 		post = blogposts.post_by_id(post_id)
-		self.user = ""
-		post_comments = comments.comments_by_post_id(str(post_id))
-		logged_in = False
-		if self.read_cookie():
-			self.user = users.find_by_id(self.return_id_by_cookie())
-			logged_in = self.is_logged_in()
-		self.render("postpage.html", post=post, user=self.user,
-					 comments=post_comments, logged_in=logged_in)
+		if post:
+			self.user = ""
+			post_comments = comments.comments_by_post_id(str(post_id))
+			logged_in = False
+			if self.is_logged_in():
+				self.user = users.find_by_id(self.return_id_by_cookie())
+				logged_in = self.is_logged_in()
+			self.render("postpage.html", post=post, user=self.user,
+						 comments=post_comments, logged_in=logged_in)
+		else:
+			self.error(404)
 
 class MainPage(Handler):
 	"""Main page for viewing 10 most recent blog entries."""
@@ -425,29 +432,33 @@ class MainPage(Handler):
 class LikePost(Handler):
 	"""Caled when a post is liked."""
 	def get(self, post_id):
-		if self.read_cookie():
-			self.like_user = users.find_by_id(self.return_id_by_cookie())
-			key = db.Key.from_path('blogposts', int(post_id))
-			post = db.get(key)
-			if self.like_user.username != post.create_user:
-				check_history = post.like_users
-				if self.like_user.username not in check_history:
-					post.likes = post.likes + 1
-					post.like_users.append(self.like_user.username)
-					post.put()
-					self.like_user.liked_posts.append(str(post.key().id()))
-					self.redirect('/blog')
+		post = blogposts.post_by_id(post_id)
+		if post:
+			if self.is_logged_in():
+				self.like_user = users.find_by_id(self.return_id_by_cookie())
+				key = db.Key.from_path('blogposts', int(post_id))
+				post = db.get(key)
+				if self.like_user.username != post.create_user:
+					check_history = post.like_users
+					if self.like_user.username not in check_history:
+						post.likes = post.likes + 1
+						post.like_users.append(self.like_user.username)
+						post.put()
+						self.like_user.liked_posts.append(str(post.key().id()))
+						self.redirect('/blog')
+					else:
+						self.write("You cannot like a post more than once!")
 				else:
-					self.write("You cannot like a post more than once!")
+					self.write("You cannot like your own post")
 			else:
-				self.write("You cannot like your own post")
+				self.write("You must be logged in to like a post")
 		else:
-			self.write("You must be logged in to like a post")
+			self.error(404)
 
 class MyPosts(Handler):
 	"""Class to view all of a users own posts."""
 	def get(self):
-		if self.read_cookie():
+		if self.is_logged_in():
 			self.user = users.find_by_id(self.return_id_by_cookie())
 			c = blogposts.all().filter('create_user =', self.user.username)
 			logged_in = self.is_logged_in()
@@ -465,101 +476,123 @@ class EditPost(Handler):
 	def get(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
 		post = db.get(key)
-		logged_in = self.is_logged_in()
-		if self.read_cookie():
-			user = users.find_by_id(self.return_id_by_cookie())
-			if user.username == post.create_user or user.is_admin == True:
-				self.render('editpost.html', post=post, logged_in=logged_in)
+		if post:
+			if self.is_logged_in():
+				logged_in = self.is_logged_in()
+				user = users.find_by_id(self.return_id_by_cookie())
+				if user.username == post.create_user or user.is_admin == True:
+					self.render('editpost.html', post=post, logged_in=logged_in)
+			else:
+				self.write("You do not have access to this function!")
 		else:
-			self.write("You do not have access to this function!")
+			self.error(404)
 
 	def post(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
 		post = db.get(key)
-		self.title = self.request.get("title")
-		self.body = self.request.get("body")
+		if post:
+			self.title = self.request.get("title")
+			self.body = self.request.get("body")
 
-		if self.read_cookie():
-			user = users.find_by_id(self.return_id_by_cookie())
-			if user.username == post.create_user or user.is_admin == True:
-				if self.title and self.body:
-					post.title = self.title
-					post.body = self.body
-					post.put()
-					self.redirect('/blog/postpage/%s' % str(post.key().id()))
+			if self.read_cookie():
+				user = users.find_by_id(self.return_id_by_cookie())
+				if user.username == post.create_user or user.is_admin == True:
+					if self.title and self.body:
+						post.title = self.title
+						post.body = self.body
+						post.put()
+						self.redirect('/blog/postpage/%s' % str(post.key().id()))
+					else:
+						error = "Please enter a title and body"
+						self.render("editpost.html", error=error)
 				else:
-					error = "Please enter a title and body"
-					self.render("editpost.html", error=error)
+					self.write("You do not have access to this function!")
 			else:
 				self.write("You do not have access to this function!")
 		else:
-			self.write("You do not have access to this function!")
+			self.error(404)
 
 class DeletePost(Handler):
 	"""Delete a post."""
 	def get(self, post_id):
 		key = db.Key.from_path('blogposts', int(post_id))
 		post = db.get(key)
-		if self.read_cookie():
-			user = users.find_by_id(self.return_id_by_cookie())
-			if user.username == post.create_user or user.is_admin == True:
-				post.delete()
-				self.redirect('/blog/myposts')
+		if post:
+			if self.read_cookie():
+				user = users.find_by_id(self.return_id_by_cookie())
+				if user.username == post.create_user or user.is_admin == True:
+					post.delete()
+					self.redirect('/blog/myposts')
+				else:
+					self.write("You do not have access to this function!")
 			else:
 				self.write("You do not have access to this function!")
 		else:
-			self.write("You do not have access to this function!")
+			self.error(404)
 
 class Comment(Handler):
 	"""Validate a comment form then post one."""
 	def get(self, post_id):
 		post = blogposts.post_by_id(post_id)
-		logged_in = self.is_logged_in()
-		if self.is_logged_in():
-			self.render('comment.html', post=post, logged_in=logged_in)
+		if post:
+			logged_in = self.is_logged_in()
+			if self.is_logged_in():
+				self.render('comment.html', post=post, logged_in=logged_in)
+			else:
+				self.redirect('/blog/login')
 		else:
-			self.redirect('/blog/login')
+			self.error(404)
 
 	def post(self, post_id):
-		if self.read_cookie():
-			self.comment_user = users.find_by_id(self.return_id_by_cookie())
-			self.title = self.request.get("title")
-			self.body = self.request.get("body")
-			self.post = post_id
-			post = blogposts.post_by_id(post_id)
-			error = False
-			error_title = ""
-			error_body = ""
+		post = blogposts.post_by_id(post_id)
+		if post:
+			if self.is_logged_in():
+				self.comment_user = users.find_by_id(self.return_id_by_cookie())
+				self.title = self.request.get("title")
+				self.body = self.request.get("body")
+				self.post = post_id
+				post = blogposts.post_by_id(post_id)
+				error = False
+				error_title = ""
+				error_body = ""
 
-			if not self.title:
-				error_title = "Please enter a title"
-				error = True
-			if not self.body:
-				error_body = "Please enter a body"
-				error = True
+				if not self.title:
+					error_title = "Please enter a title"
+					error = True
+				if not self.body:
+					error_body = "Please enter a body"
+					error = True
 
-			if not error:
-				c = comments.post_comment(self.comment_user.username, self.title,
-										  self.body, self.post)
-				c.put()
-				self.redirect('/blog/postpage/%s' % self.post)
+				if not error:
+					c = comments.post_comment(self.comment_user.username, self.title,
+											  self.body, self.post)
+					c.put()
+					self.redirect('/blog/postpage/%s' % self.post)
+				else:
+					self.render('comment.html', post=post, error_title=error_title,
+												error_body=error_body, title=self.title,
+												body=self.body)
 			else:
-				self.render('comment.html', post=post, error_title=error_title,
-											error_body=error_body, title=self.title,
-											body=self.body)
+				self.redirect('/blog/login')
 		else:
-			self.redirect('/blog/login')
+			self.error(404)
 
 class ViewComment(Handler):
 	"""View an individual comment"""
 	def get(self, comment_id):
 		key = db.Key.from_path('comments', int(comment_id))
 		comment = db.get(key)
-		logged_in = self.is_logged_in()
-		user = None
-		if self.read_cookie():
-			user = users.find_by_id(self.return_id_by_cookie())
-		self.render("viewcomment.html", comment=comment, logged_in=logged_in, user=user)
+		if comment:
+			if self.is_logged_in():
+				logged_in = self.is_logged_in()
+				user = None
+				if self.read_cookie():
+					user = users.find_by_id(self.return_id_by_cookie())
+				self.render("viewcomment.html", comment=comment, logged_in=logged_in, user=user)
+			else:
+				self.redirect('/blog/login')
+		else:
+			self.error(404)
 
 class ChangePassword(Handler):
 	"""Class for users to change their own password"""
@@ -625,54 +658,68 @@ class EditComment(Handler):
 	def get(self, comment_id):
 		key = db.Key.from_path('comments', int(comment_id))
 		comment = db.get(key)
-		self.render("editcomment.html", comment=comment)
+		if self.is_logged_in():
+			if comment:
+				self.render("editcomment.html", comment=comment)
+			else:
+				self.error(404)
+		else:
+			self.redirect('/blog/login')
 
 	def post(self, comment_id):
 		key = db.Key.from_path('comments', int(comment_id))
 		comment = db.get(key)
-		params = dict()
-		error = False
-		if self.read_cookie():
-			user = users.find_by_id(self.return_id_by_cookie())
+		if comment:
+			params = dict()
+			error = False
+			if self.is_logged_in():
+				user = users.find_by_id(self.return_id_by_cookie())
 
-		self.title = self.request.get("title")
-		self.body = self.request.get("body")
+				self.title = self.request.get("title")
+				self.body = self.request.get("body")
 
-		if not self.title:
-			error = True
-			params['title_error'] = "Please make sure there is a title"
+				if not self.title:
+					error = True
+					params['title_error'] = "Please make sure there is a title"
 
-		if not self.body:
-			error = True
-			params['body_error'] = "Please make sure there is a body"
+				if not self.body:
+					error = True
+					params['body_error'] = "Please make sure there is a body"
 
-		if not user.username == comment.create_user or user.is_admin == True:
-			error = True
-			params['access_error'] = "You do not have the proper credentials to edit this post!"
+				if not user.username == comment.create_user or user.is_admin == True:
+					error = True
+					params['access_error'] = "You do not have the proper credentials to edit this post!"
 
-		if not error:
-			comment.title = self.title
-			comment.body = self.body
-			comment.put()
-			self.redirect('/blog/viewcomment/%s' % str(comment.key().id()))
+				if not error:
+					comment.title = self.title
+					comment.body = self.body
+					comment.put()
+					self.redirect('/blog/viewcomment/%s' % str(comment.key().id()))
+				else:
+					self.render("editcomment.html", comment=comment, **params)
+			else:
+				self.redirect('/blog/login')
 		else:
-			self.render("editcomment.html", comment=comment, **params)
+			self.error(404)
 
 class DeleteComment(Handler):
 	def get(self, comment_id):
 		key = db.Key.from_path('comments', int(comment_id))
 		comment = db.get(key)
-		post_key = db.Key.from_path('blogposts', int(comment.post))
-		post = db.get(post_key)
-		if self.read_cookie():
-			user = users.find_by_id(self.return_id_by_cookie())
-			if user.username == comment.create_user or user.is_admin == True:
-				comment.delete()
-				self.redirect('/blog/postpage/%s' % str(post.key().id()))
+		if comment:
+			post_key = db.Key.from_path('blogposts', int(comment.post))
+			post = db.get(post_key)
+			if self.is_logged_in():
+				user = users.find_by_id(self.return_id_by_cookie())
+				if user.username == comment.create_user or user.is_admin == True:
+					comment.delete()
+					self.redirect('/blog/postpage/%s' % str(post.key().id()))
+				else:
+					self.write("You don't have access to this function!")
 			else:
 				self.write("You don't have access to this function!")
 		else:
-			self.write("You don't have access to this function!")
+			self.error(404)
 
 		
 
