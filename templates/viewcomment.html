@@ -2,15 +2,41 @@
 
 {% block content %}
 
-<div>
-	<div>
+<div class="row">
+	{% if access_error %}
+		<p class="row">{{access_error}}</p>
+	{% endif %}
+	<div class="col-xs-4">
 		{{comment.title}}
-		{{comment.create_user}}
-		{{comment.create_date.strftime('%b %d, %Y')}}
 	</div>
-	<div>
+	<div class="col-xs-4">
+		Written By: {{comment.create_user}}
+	</div>
+	<div class="col-xs-4">
+		Written On: {{comment.create_date.strftime('%b %d, %Y')}}
+	</div>
+</div>
+<div class="row">
+	<div class="col-xs-12 post-body">
 		{{comment.body}}
 	</div>
+</div>
+<div class="row">
+	<div class="col-xs-6">
+		{% if user.username == comment.create_user or user.is_admin == True %}
+		<form action="/blog/editcomment/{{comment.key().id()}}">
+			<input type="submit" value="Edit Comment" class="btn btn-default">
+		</form>
+		{% endif %}
+	</div>
+	<div class="col-xs-6">
+		{% if user.username == comment.create_user or user.is_admin == True %}
+		<form action="/blog/deletecomment/{{comment.key().id()}}">
+			<input type="submit" value="Delete Comment" class="btn btn-default">
+		</form>
+		{% endif %}
+	</div>
+</div>
 	<div>
 		<a href="/blog/postpage/{{comment.post}}">Return to post</a>
 	</div>
